@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 const subjects = ["Bahasa Melayu", "English", "Mathematics", "Science", "Chinese"];
 
@@ -35,48 +35,30 @@ const questionBank = {
   ],
 };
 
-function saveState(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
-}
-
-function loadState(key, fallback) {
-  try {
-    const v = JSON.parse(localStorage.getItem(key));
-    return v ?? fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function LevelPath({ subject, onSelect }) {
-  const levels = [1, 2, 3, 4, 5];
-
+function XPBar({ xp }) {
   return (
-    <div className="flex flex-col items-center gap-4">
-      {levels.map((lvl, i) => (
-        <div key={lvl} className="flex items-center gap-3">
-          <div
-            onClick={() => onSelect(subject, lvl)}
-            className="w-14 h-14 rounded-full bg-green-500 text-white flex items-center justify-center font-bold shadow-lg hover:scale-110 transition cursor-pointer"
-          >
-            {lvl}
-          </div>
-          {i < levels.length - 1 && (
-            <div className="w-1 h-10 bg-green-200 rounded" />
-          )}
-        </div>
-      ))}
+    <div className="w-full bg-white/20 h-3 rounded-full overflow-hidden backdrop-blur">
+      <div
+        className="h-3 bg-gradient-to-r from-green-400 to-emerald-600 transition-all duration-500 shadow-lg"
+        style={{ width: `${xp % 100}%` }}
+      />
     </div>
   );
 }
 
-function XPBar({ xp }) {
+function FloatingBlob() {
   return (
-    <div className="w-full bg-gray-200 h-3 rounded-full overflow-hidden">
-      <div
-        className="h-3 bg-green-500 transition-all duration-500"
-        style={{ width: `${xp % 100}%` }}
-      />
+    <div className="absolute w-72 h-72 bg-green-300/30 rounded-full blur-3xl animate-pulse top-10 left-10" />
+  );
+}
+
+function LevelNode({ label, onClick }) {
+  return (
+    <div
+      onClick={onClick}
+      className="w-20 h-20 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 text-white flex items-center justify-center font-bold shadow-xl cursor-pointer hover:scale-110 hover:rotate-3 transition-all duration-300"
+    >
+      {label}
     </div>
   );
 }
@@ -88,10 +70,9 @@ export default function App() {
   const [index, setIndex] = useState(0);
   const [answer, setAnswer] = useState("");
 
-  const [xp, setXp] = useState(() => loadState("xp", 0));
-  const [coins, setCoins] = useState(() => loadState("coins", 0));
-  const [hearts, setHearts] = useState(() => loadState("hearts", 5));
-  const [badges, setBadges] = useState(() => loadState("badges", []));
+  const [xp, setXp] = useState(() => Number(localStorage.getItem("xp") || 0));
+  const [coins, setCoins] = useState(() => Number(localStorage.getItem("coins") || 0));
+  const [hearts, setHearts] = useState(() => Number(localStorage.getItem("hearts") || 5));
 
   const [shake, setShake] = useState(false);
   const [shop, setShop] = useState(false);
@@ -99,11 +80,10 @@ export default function App() {
   const current = questions[index];
 
   useEffect(() => {
-    saveState("xp", xp);
-    saveState("coins", coins);
-    saveState("hearts", hearts);
-    saveState("badges", badges);
-  }, [xp, coins, hearts, badges]);
+    localStorage.setItem("xp", xp);
+    localStorage.setItem("coins", coins);
+    localStorage.setItem("hearts", hearts);
+  }, [xp, coins, hearts]);
 
   const startLevel = (sub) => {
     const shuffled = [...questionBank[sub]].sort(() => Math.random() - 0.5);
@@ -121,10 +101,6 @@ export default function App() {
     if (correct) {
       setXp((x) => x + 10);
       setCoins((c) => c + 5);
-
-      if (xp > 0 && xp % 50 === 0) {
-        setBadges((b) => [...b, `🏅 Level Master ${subject}`]);
-      }
     } else {
       setHearts((h) => Math.max(0, h - 1));
       setShake(true);
@@ -145,69 +121,71 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f2f3f5] flex">
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-green-50 via-emerald-50 to-blue-50">
+
+      <FloatingBlob />
+      <FloatingBlob />
 
       {/* SIDEBAR */}
-      <div className="w-60 bg-white shadow-xl p-4 flex flex-col gap-4">
-        <h1 className="text-green-600 font-bold text-xl">SJKC Quest 🌱</h1>
+      <div className="fixed left-0 top-0 h-full w-64 bg-white/70 backdrop-blur-xl shadow-xl p-4 flex flex-col gap-4">
+        <h1 className="text-2xl font-extrabold text-green-600">🌿 SJKC Quest</h1>
 
         <XPBar xp={xp} />
 
-        <div className="text-sm">❤️ Hearts: {hearts}</div>
-        <div className="text-sm">🪙 Coins: {coins}</div>
+        <div className="text-sm mt-2 font-semibold">❤️ Hearts: {hearts}</div>
+        <div className="text-sm font-semibold">🪙 Coins: {coins}</div>
 
         <button
           onClick={() => setShop(true)}
-          className="bg-green-500 text-white p-2 rounded-xl"
+          className="mt-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white p-2 rounded-xl shadow-lg hover:scale-105 transition"
         >
-          Shop 🛒
+          🛒 Shop
         </button>
 
-        <div className="mt-4">
-          <h3 className="font-bold text-sm mb-2">Badges</h3>
-          <div className="text-xs space-y-1">
-            {badges.map((b, i) => (
-              <div key={i}>🏆 {b}</div>
-            ))}
-          </div>
-        </div>
+        <p className="text-xs text-gray-500 mt-auto">
+          Learn like a game 🎮
+        </p>
       </div>
 
       {/* MAIN */}
-      <div className="flex-1 p-6">
+      <div className="ml-64 p-8">
 
+        {/* HOME */}
         {screen === "home" && (
           <div>
-            <h2 className="text-2xl font-bold mb-6 text-green-600">
-              Choose Your Learning Path
+            <h2 className="text-3xl font-bold text-green-700 mb-6">
+              Choose Your Adventure ✨
             </h2>
 
             <div className="grid grid-cols-3 gap-10">
               {subjects.map((s) => (
-                <div key={s} className="flex flex-col items-center">
-                  <h3 className="font-bold mb-2">{s}</h3>
-                  <LevelPath subject={s} onSelect={startLevel} />
+                <div key={s} className="flex flex-col items-center gap-3">
+                  <LevelNode label={s[0]} onClick={() => startLevel(s)} />
+                  <p className="text-sm font-semibold text-gray-600">{s}</p>
                 </div>
               ))}
             </div>
           </div>
         )}
 
+        {/* PLAY */}
         {screen === "play" && current && (
-          <div className={`bg-white p-6 rounded-2xl shadow-xl max-w-xl ${shake ? "animate-pulse" : ""}`}>
+          <div
+            className={`max-w-xl bg-white/80 backdrop-blur-xl p-6 rounded-2xl shadow-2xl border border-white ${shake ? "animate-pulse" : ""}`}
+          >
             <h3 className="text-green-600 font-bold mb-2">{subject}</h3>
-            <p className="text-xl mb-4">{current.q}</p>
+            <p className="text-2xl font-semibold mb-4">{current.q}</p>
 
             <input
               value={answer}
               onChange={(e) => setAnswer(e.target.value)}
-              className="border p-3 w-full rounded-xl mb-3"
-              placeholder="Type answer..."
+              className="border w-full p-3 rounded-xl mb-3 focus:outline-none focus:ring-2 focus:ring-green-400"
+              placeholder="Type your answer..."
             />
 
             <button
               onClick={check}
-              className="bg-green-500 hover:bg-green-600 text-white w-full p-3 rounded-xl"
+              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white p-3 rounded-xl font-bold hover:scale-105 transition"
             >
               Check Answer
             </button>
@@ -217,14 +195,14 @@ export default function App() {
         {/* SHOP */}
         {shop && (
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-            <div className="bg-white p-6 rounded-2xl w-80">
-              <h2 className="font-bold mb-3">Shop 🛒</h2>
+            <div className="bg-white p-6 rounded-2xl w-80 shadow-2xl">
+              <h2 className="font-bold text-lg mb-3">🛒 Shop</h2>
 
               <button
                 onClick={buyHeart}
-                className="w-full bg-blue-500 text-white p-2 rounded-xl"
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-xl"
               >
-                Buy Heart (20 coins)
+                ❤️ Buy Heart (20 coins)
               </button>
 
               <button
